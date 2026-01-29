@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Slime AI</h2>
+<textarea id="q"></textarea>
+<button onclick="ask()">Send</button>
+<pre id="a"></pre>
+
+<script>
+async function ask(){
+  const r = await fetch("http://localhost:3000/ai",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ prompt:q.value })
+  });
+  a.textContent=(await r.json()).answer;
+}
+</script>
+</body>
+</html>
