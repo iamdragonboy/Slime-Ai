@@ -1,0 +1,27 @@
+{
+  "_comment": "SlimeVM - Full VPS-like Egg with MOTD & ssh.txt",
+  "name": "SlimeVM",
+  "description": "Slime VM Official Egg\nMade by: dragonxspider\nSupport: https://discord.gg/kFNd2EDJNN\n\nPrivileged container giving near-full Ubuntu VPS feel.\nIllegal activities (DDoS, mining etc.) = instant suspension by admin!\nUse only for legal purposes.",
+  "features": ["docker"],
+  "docker_images": {
+    "Default": "ghcr.io/pterodactyl/yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "bash /home/container/install.sh",
+  "config": {
+    "files": "{}",
+    "startup": "{\n  \"done\": \"SlimeVM started\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\ncd /mnt/server || exit 1\n\n# Clean old files if any\nrm -rf ./*\n\n# Basic packages for a usable system\napt-get update -y\napt-get install -y sudo curl wget nano vim net-tools openssh-server passwd ca-certificates gnupg lsb-release software-properties-common apt-transport-https\n\n# Enable root login & set random password\necho \"root login allowed\"\nROOT_PASS=\( (openssl rand -base64 14 | tr -dc 'a-zA-Z0-9')\necho \"root: \){ROOT_PASS}\" | chpasswd\n\n# Get external IP (approximate, real mein panel ke allocation se use karo)\nEXT_IP=\( (curl -s ifconfig.me || echo \"your-panel-ip\")\n\n# Create ssh.txt\necho \"SlimeVM Access Details\" > ssh.txt\necho \"SSH Command: ssh root@ \){EXT_IP} -p {{server.build.default_port}}\" >> ssh.txt\necho \"Password: ${ROOT_PASS}\" >> ssh.txt\necho \"\" >> ssh.txt\necho \"!! WARNING !!\" >> ssh.txt\necho \"DDoS, crypto mining, spam, illegal activities = INSTANT SUSPENSION\" >> ssh.txt\necho \"Use responsibly - only legal purposes allowed.\" >> ssh.txt\n\n# MOTD (login pe dikhega)\ncat > /etc/motd << 'EOL'\nSlime VM Official Egg\nMade by: dragonxspider\nSupport: https://discord.gg/kFNd2EDJNN\n\nWelcome to your SlimeVM instance!\n\nAllocated Resources:\nCPU: {{server.build.limit.cpu}}%\nRAM: {{server.build.limit.memory}} MB\nDisk: {{server.build.limit.disk}} MB\n\n!! STRICT RULES !!\n- No DDoS\n- No crypto mining\n- No spam / illegal content\nViolation = immediate suspension by admin.\n\nEnjoy responsibly!\nEOL\n\n# SSH config tweaks\nsed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config\nsed -i 's/#Port 22/Port {{server.build.default_port}}/' /etc/ssh/sshd_config || echo \"Port {{server.build.default_port}}\" >> /etc/ssh/sshd_config\nsed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config\n\n# Start SSH in foreground (Pterodactyl needs process to stay alive)\n/usr/sbin/sshd -D -e &\n\n# Keep container alive + show MOTD simulation\necho \"SlimeVM ready! Check ssh.txt for login details.\"\nsleep infinity",
+      "container": "ghcr.io/pterodactyl/installers:debian",
+      "entrypoint": "/bin/bash"
+    }
+  },
+  "author": "dragonxspider (modified from community VPS eggs)",
+  "version": "1.0",
+  "tags": ["vps", "ubuntu", "debian", "root", "slimevm"]
+}
