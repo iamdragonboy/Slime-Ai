@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "version": "PTDL_v2"
+  },
+  "name": "AIO True Auto (Python | Node | Bun | Nginx)",
+  "author": "custom",
+  "description": "TRUE AIO egg with auto-detect, .env loader, PM2 restart, Nginx domain support",
+  "docker_images": {
+    "ghcr.io/parkervcp/yolks:ubuntu": "Ubuntu AIO"
+  },
+  "startup": "bash aio.sh",
+  "file_denylist": [],
+  "config": {
+    "files": "{}",
+    "startup": "{ \"done\": \"AIO ready\" }",
+    "logs": "{}",
+    "stop": "^^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\nset -e\n\napt update -y\napt install -y curl wget git nginx python3 python3-pip\n\n# Node.js LTS\ncurl -fsSL https://deb.nodesource.com/setup_lts.x | bash -\napt install -y nodejs\nnpm install -g pm2 yarn\n\n# Bun\ncurl -fsSL https://bun.sh/install | bash\n\n# AIO launcher\ncat << 'EOF' > aio.sh\n#!/bin/bash\nexport PATH=\"$HOME/.bun/bin:$PATH\"\n\n# Load .env automatically\nif [ -f .env ]; then\n  export $(grep -v '^#' .env | xargs)\n  echo \"🔐 .env loaded\"\nfi\n\n# Auto detect app\nif [ -f main.py ]; then\n  echo \"🐍 Python detected\"\n  pm2 start main.py --interpreter python3 --name aio-python\n\nelif [ -f app.py ]; then\n  echo \"🌐 Flask detected\"\n  pm2 start app.py --interpreter python3 --name aio-flask\n\nelif [ -f index.js ]; then\n  echo \"🟢 Node detected\"\n  pm2 start index.js --name aio-node\n\nelif [ -f index.ts ]; then\n  echo \"⚡ Bun detected\"\n  pm2 start \"bun run index.ts\" --name aio-bun\n\nelse\n  echo \"❌ No entry file found\"\n  exit 1\nfi\n\npm2 save\npm2 logs\nEOF\n\nchmod +x aio.sh\n\n# Nginx basic config\nrm -f /etc/nginx/sites-enabled/default\ncat << 'EOF' > /etc/nginx/sites-enabled/aio.conf\nserver {\n    listen 80;\n    server_name _;\n\n    location / {\n        proxy_pass http://127.0.0.1:3000;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n    }\n}\nEOF\n\nservice nginx restart\n\necho \"AIO ready\"",
+      "container": "ghcr.io/parkervcp/installers:ubuntu",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Expose Port",
+      "description": "Internal app port (Flask/Web)",
+      "env_variable": "APP_PORT",
+      "default_value": "3000",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|numeric"
+    }
+  ]
+}
