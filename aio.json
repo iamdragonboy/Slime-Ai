@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "version": "PTDL_v2"
+  },
+  "name": "TRUE AIO Multi-Bot (Python | Node | Bun)",
+  "author": "custom",
+  "description": "Run multiple bots/apps in one server with auto-detect, PM2, .env loader",
+  "docker_images": {
+    "ghcr.io/parkervcp/yolks:ubuntu": "Ubuntu AIO"
+  },
+  "startup": "bash aio.sh",
+  "file_denylist": [],
+  "config": {
+    "files": "{}",
+    "startup": "{ \"done\": \"Multi-Bot AIO ready\" }",
+    "logs": "{}",
+    "stop": "^^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\nset -e\n\napt update -y\napt install -y curl wget git python3 python3-pip\n\n# Node.js\ncurl -fsSL https://deb.nodesource.com/setup_lts.x | bash -\napt install -y nodejs\nnpm install -g pm2 yarn\n\n# Bun\ncurl -fsSL https://bun.sh/install | bash\n\n# AIO MULTI BOT LAUNCHER\ncat << 'EOF' > aio.sh\n#!/bin/bash\nexport PATH=\"$HOME/.bun/bin:$PATH\"\n\n# Load global .env\nif [ -f .env ]; then\n  export $(grep -v '^#' .env | xargs)\n  echo \"🔐 Global .env loaded\"\nfi\n\npm2 delete all >/dev/null 2>&1\n\nstart_bot() {\n  NAME=$1\n  CMD=$2\n  echo \"🚀 Starting $NAME\"\n  pm2 start $CMD --name $NAME\n}\n\n# Scan folders\nfor dir in bots/*; do\n  [ -d \"$dir\" ] || continue\n  cd \"$dir\"\n\n  # Load per-bot env\n  if [ -f .env ]; then\n    export $(grep -v '^#' .env | xargs)\n    echo \"🔐 $dir .env loaded\"\n  fi\n\n  if [ -f main.py ]; then\n    start_bot \"$(basename $dir)-python\" \"python3 main.py\"\n\n  elif [ -f index.js ]; then\n    start_bot \"$(basename $dir)-node\" \"node index.js\"\n\n  elif [ -f index.ts ]; then\n    start_bot \"$(basename $dir)-bun\" \"bun run index.ts\"\n  fi\n\n  cd - >/dev/null\n done\n\npm2 save\npm2 logs\nEOF\n\nchmod +x aio.sh\n\necho \"Multi-Bot AIO ready\"",
+      "container": "ghcr.io/parkervcp/installers:ubuntu",
+      "entrypoint": "bash"
+    }
+  }
+}
